@@ -1,6 +1,7 @@
 import time
 from msg import parse_msg
 from flags import get_visible_flags, FLAGS
+from controller import Controller
 from position import (
     position_from_three_flags,
     body_angle_from_flag,
@@ -9,7 +10,6 @@ from position import (
     get_opponent_from_see,
 )
 from socket_client import SocketClient
-from controller import Controller
 
 
 class InitError(Exception):
@@ -17,17 +17,18 @@ class InitError(Exception):
 
 
 class Agent:
-    def __init__(self, team_name, version=7, is_goalie=False, actions=None):
+    def __init__(self, team_name, version=7, is_goalie=False):
         self.team_name = team_name
         self.version = version
         self.is_goalie = is_goalie
         self.socket = SocketClient()
-        self.controller = Controller(actions=actions)
         self.play_on = False
         self.running = False
         self.rotation_speed = 0.0
         self.x = None
         self.y = None
+        self.side = None
+        self.controller = Controller()
 
     def connect(self):
         goalie_str = " (goalie)" if self.is_goalie else ""
@@ -45,6 +46,9 @@ class Agent:
         if not parsed or parsed.get("cmd") != "init":
             return False
         p = parsed.get("p") or []
+        if len(p) > 1 and isinstance(p[1], str):
+            self.side = p[1]
+            self.controller.set_actions(self._route_for_side(self.side))
         play_mode = p[3] if len(p) > 3 else None
         if isinstance(play_mode, str):
             self.play_on = (play_mode == "play_on")
@@ -80,13 +84,18 @@ class Agent:
             elif str(msg).startswith("goal_"):
                 self.play_on = False
                 self.controller.on_goal()
-                print("Гол зафиксирован: маршрут перезапущен с начала")
 
     def _process_see(self, parsed):
         flags_list = get_visible_flags(parsed)
         ball = get_ball_from_see(parsed)
         pos = position_from_three_flags(flags_list)
         if pos is None:
+            print("[Игрок] позиция не определена (мало ориентиров)")
+            if ball:
+                print(f"[Мяч][отн] dist={ball['dist']:.2f} angle={ball['angle']:.2f}")
+            opp_rel = get_opponent_from_see(parsed, self.team_name)
+            if opp_rel:
+                print(f"[Противник][отн] dist={opp_rel['dist']:.2f} angle={opp_rel['angle']:.2f}")
             self._send_command(flags_list, ball)
             return
 
@@ -111,6 +120,8 @@ class Agent:
                 self.x, self.y, body_rad, opp["dist"], opp["angle"]
             )
             print(f"[Противник] x={ox:.2f} y={oy:.2f}")
+        elif opp:
+            print(f"[Противник][отн] dist={opp['dist']:.2f} angle={opp['angle']:.2f}")
 
         self._send_command(flags_list, ball)
 
@@ -125,13 +136,29 @@ class Agent:
         elif cmd == "see":
             self._process_see(parsed)
 
-    def _send_command(self, flags_list, ball):
-        command = self.controller.decide(self.play_on, flags_list, ball)
+    def _send_command(self, flags_list=None, ball=None):
+        if not self.play_on:
+            return
+        command = self.controller.decide(self.play_on, flags_list or [], ball)
         if command:
             self.socket.send(f"({command['n']} {command['v']})")
             return
-        if self.play_on and self.rotation_speed != 0:
+        if self.rotation_speed != 0:
             self.turn(self.rotation_speed)
+
+    def _route_for_side(self, side):
+        # Маршрут зеркалится по стороне поля: слева идем к правым флагам и воротам, справа — наоборот.
+        if side == "r":
+            return [
+                {"act": "flag", "fl": "fplb"},
+                {"act": "flag", "fl": "fglb"},
+                {"act": "kick", "goal": "gl"},
+            ]
+        return [
+            {"act": "flag", "fl": "fprb"},
+            {"act": "flag", "fl": "fgrb"},
+            {"act": "kick", "goal": "gr"},
+        ]
 
     def run(self, start_pos, rotation_speed=0):
         self.connect()
