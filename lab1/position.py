@@ -5,7 +5,7 @@
 """
 import math
 from flags import FLAGS
-from config import FIELD_WIDTH, FIELD_HEIGHT, EPS
+from config import FIELD_X_MIN, FIELD_X_MAX, FIELD_Y_MIN, FIELD_Y_MAX, EPS
 
 
 def _to_rad(deg):
@@ -13,8 +13,8 @@ def _to_rad(deg):
 
 
 def in_field(x, y):
-    """Проверка, что точка в границах поля."""
-    return -FIELD_WIDTH <= x <= FIELD_WIDTH and -FIELD_HEIGHT <= y <= FIELD_HEIGHT
+    """Проверка, что точка в границах поля (-52..52 по x, -33..34 по y)."""
+    return FIELD_X_MIN <= x <= FIELD_X_MAX and FIELD_Y_MIN <= y <= FIELD_Y_MAX
 
 
 def position_from_two_flags(x1, y1, d1, x2, y2, d2):
@@ -32,9 +32,9 @@ def position_from_two_flags(x1, y1, d1, x2, y2, d2):
         y = num_y / denom_y
         # x из первого уравнения: (x-x1)² = d1² - (y-y1)²
         disc = d1**2 - (y - y1)**2
-        if disc < -EPS:
+        if disc < 0:
             return []
-        sqrt_d = math.sqrt(max(0.0, disc))
+        sqrt_d = math.sqrt(disc)
         return [(x1 + sqrt_d, y), (x1 - sqrt_d, y)]
 
     # x = alpha*y + beta; из вычитания уравнений: alpha = (y1-y2)/(x2-x1), beta = (d1²-d2²-x1²+x2²-y1²+y2²)/(2(x2-x1))
@@ -47,7 +47,7 @@ def position_from_two_flags(x1, y1, d1, x2, y2, d2):
     disc = b**2 - 4 * a * c
     if disc < -EPS:
         return []
-    sqrt_d = math.sqrt(max(0.0, disc))
+    sqrt_d = math.sqrt(disc)
     ys = [(-b + sqrt_d) / (2 * a), (-b - sqrt_d) / (2 * a)]
     out = []
     for y in ys:
