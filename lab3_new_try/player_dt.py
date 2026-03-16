@@ -1,5 +1,7 @@
 FL = "flag"
 KI = "kick"
+# Угол в градусах: ведомый бежит сбоку от лидера, а не прямо за ним
+FOLLOWER_SIDE_OFFSET = 35
 
 
 def create_player_tree(actions):
@@ -104,12 +106,12 @@ def create_player_tree(actions):
         },
         "followerFarTurn": {
             "exec": lambda mgr, state: state.__setitem__(
-                "command", ("turn", str(int(state["teammate_angle"])))
+                "command", ("turn", str(int(state["teammate_angle"] - FOLLOWER_SIDE_OFFSET)))
             ),
             "next": "sendCommand",
         },
         "followerFarDash": {
-            "exec": lambda mgr, state: state.__setitem__("command", ("dash", "90")),
+            "exec": lambda mgr, state: state.__setitem__("command", ("dash", "75")),
             "next": "sendCommand",
         },
         "followerCheckAngle": {
