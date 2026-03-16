@@ -139,13 +139,25 @@ def get_ball_from_see(see_res):
     return _get_obj_from_see(see_res, "b")
 
 
+def _player_team_from_name_arr(name_arr):
+    """Из name_arr игрока (p TeamName unum или p unum TeamName) извлекаем имя команды."""
+    if not name_arr or len(name_arr) < 2:
+        return None
+    # Формат (p "TeamName" unum): команда на индексе 1
+    for i in (1, 2):
+        if i < len(name_arr) and isinstance(name_arr[i], str):
+            return name_arr[i]
+    return None
+
+
 def get_opponent_from_see(see_res, my_team=None):
     """
-    Первый видимый игрок противоположной команды (p "teamX" num).
-    my_team — имя нашей команды, чтобы игнорировать своих.
+    Первый видимый игрок противоположной команды. (p "teamX" num) или (P "teamX" num).
+    my_team — имя нашей команды; своих пропускаем, возвращаем только чужую команду.
     """
     if see_res.get("cmd") != "see" or len(see_res["p"]) < 3:
         return None
+    my_team_norm = (my_team or "").strip().lower()
     for i in range(2, len(see_res["p"])):
         ob = see_res["p"][i]
         if not isinstance(ob, dict) or "p" not in ob or len(ob["p"]) < 3:
@@ -156,9 +168,13 @@ def get_opponent_from_see(see_res, my_team=None):
             name_arr = name["p"]
         else:
             name_arr = arr
-        if name_arr[0] != "p":
+        if not name_arr:
             continue
-        if my_team and len(name_arr) >= 2 and name_arr[1] == my_team:
+        first = name_arr[0]
+        if isinstance(first, str) and first.lower() != "p":
+            continue
+        seen_team = _player_team_from_name_arr(name_arr)
+        if my_team_norm and seen_team and seen_team.strip().lower() == my_team_norm:
             continue
         nums = [x for x in arr if isinstance(x, (int, float))]
         if len(nums) >= 2:
