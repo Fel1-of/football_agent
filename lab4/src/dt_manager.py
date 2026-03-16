@@ -52,13 +52,29 @@ class DTManager:
             return self.visible[obj_key].get("dir", 0)
         return 0
 
+    def _player_team_from_name(self, name: list):
+        """Имя команды из name игрока: (p TeamName unum) или (p unum TeamName)."""
+        if not name or len(name) < 2:
+            return None
+        for i in (1, 2):
+            if i < len(name):
+                v = name[i]
+                if isinstance(v, str):
+                    return v.strip('"').strip()
+        return None
+
     def getTeammates(self) -> list:
         teammates = []
+        my_team_norm = (self.team or "").strip().lower()
         for key, obj in self.visible.items():
             name = obj.get("name", [])
             if not isinstance(name, list) or len(name) < 2:
                 continue
-            if name[0] == "p" and str(name[1]).strip('"') == self.team:
+            first = name[0]
+            if isinstance(first, str) and first.lower() != "p":
+                continue
+            seen_team = self._player_team_from_name(name)
+            if seen_team and seen_team.lower() == my_team_norm:
                 teammates.append((key, obj))
         return teammates
 
