@@ -36,10 +36,6 @@ class DTManager:
     def getCornerFlag(self) -> str:
         return "fplb" if self.side == "l" else "fprb"
 
-    def getScorerWingFlag(self) -> str:
-        """Угол поля (крыло), чтобы забивающий бежал сбоку, а не по одной линии с пасующим."""
-        return "flb" if self.side == "l" else "frb"
-
     def getGoalCornerFlag(self) -> str:
         return "fgrb" if self.side == "l" else "fglt"
 
