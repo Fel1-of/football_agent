@@ -21,7 +21,9 @@ def create_passer_tree():
         "dashToBall": {"exec": lambda mgr, state: _dash_to_ball(mgr, state), "next": "sendCommand"},
         "startPassing": {"exec": lambda mgr, state: state.__setitem__("status", "passing"), "next": "checkPassing"},
         "checkPassing": {"condition": lambda mgr, state: state["status"] == "passing", "trueCond": "findScorer", "falseCond": "waitGoal"},
-        "findScorer": {"condition": lambda mgr, state: mgr.getTeammateCount() > 0, "trueCond": "passToScorer", "falseCond": "rotateWithBall"},
+        "findScorer": {"condition": lambda mgr, state: mgr.getTeammateCount() > 0, "trueCond": "aimAtScorer", "falseCond": "rotateWithBall"},
+        "aimAtScorer": {"condition": lambda mgr, state: _aimed_at_teammate(mgr), "trueCond": "passToScorer", "falseCond": "turnToScorer"},
+        "turnToScorer": {"exec": lambda mgr, state: _turn_to_teammate(mgr, state), "next": "sendCommand"},
         "rotateWithBall": {"exec": lambda mgr, state: state.__setitem__("command", ("turn", "60")), "next": "sendCommand"},
         "passToScorer": {"exec": lambda mgr, state: _pass_exec(mgr, state), "next": "sendCommand"},
         "waitGoal": {"exec": lambda mgr, state: state.__setitem__("command", ("turn", "10")), "next": "sendCommand"},
@@ -46,16 +48,33 @@ def _dash_to_ball(mgr, state):
     state["command"] = ("dash", str(power))
 
 
+def _aimed_at_teammate(mgr):
+    """Проверка: смотрим на напарника (угол < 4°), можно бить прямо."""
+    t = mgr.getClosestTeammate()
+    if not t:
+        return False
+    _, obj = t
+    return abs(obj.get("dir", 999)) < 4
+
+
+def _turn_to_teammate(mgr, state):
+    """Поворот в сторону напарника перед пасом."""
+    t = mgr.getClosestTeammate()
+    if t:
+        _, obj = t
+        state["command"] = ("turn", str(int(obj.get("dir", 0))))
+    else:
+        state["command"] = ("turn", "30")
+
+
 def _pass_exec(mgr, state):
-    """Пас: угол из see, сила как у друга dist*3+30 (точнее долетает)."""
+    """Пас: после поворота бьём прямо (0°), сила по дистанции."""
     teammate = mgr.getClosestTeammate()
     if teammate:
         key, obj = teammate
-        angle = obj.get("dir", 0)
         dist = obj.get("dist", 0)
-        # Точно как у друга — лучше точность; ограничиваем 32–78
         power = min(78, max(32, int(dist * 3 + 30)))
-        state["command"] = ("kick", f"{power} {int(angle)}")
+        state["command"] = ("kick", f"{power} 0")
         state["status"] = "wait_goal"
         state["say"] = "go"
     else:
