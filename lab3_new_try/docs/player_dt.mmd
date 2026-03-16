@@ -1,0 +1,81 @@
+flowchart TD
+    root["root<br/>exec: action = sequence[next], command = null"]
+    checkTeammates{"checkTeammates<br/>getTeammateCount() == 0?"}
+
+    leaderGoalVisible{"leaderGoalVisible<br/>visible(action.fl)?"}
+    leaderRotate["leaderRotate<br/>turn 90"]
+    leaderRootNext{"leaderRootNext<br/>action.act == flag?"}
+    flagSeek{"flagSeek<br/>distance(action.fl) < 3?"}
+    closeFlag["closeFlag<br/>advance target"]
+    farGoal{"farGoal<br/>abs(angle(action.fl)) > 4?"}
+    rotateToGoal["rotateToGoal<br/>turn angle(action.fl)"]
+    runToGoal["runToGoal<br/>dash 70"]
+    ballSeek{"ballSeek<br/>distance(ball) < 0.7?"}
+    closeBall{"closeBall<br/>visible(goal)?"}
+    ballGoalVisible["ballGoalVisible<br/>kick 100 angle(goal)"]
+    ballGoalInvisible["ballGoalInvisible<br/>kick 10 45"]
+
+    followerInit["followerInit<br/>closest teammate -> dist, angle"]
+    followerTooClose{"followerTooClose<br/>dist < 1 and |angle| < 40?"}
+    followerAvoidCollision["followerAvoidCollision<br/>turn 30"]
+    followerCheckFar{"followerCheckFar<br/>dist > 10?"}
+    followerFarApproach{"followerFarApproach<br/>|angle| > 5?"}
+    followerFarTurn["followerFarTurn<br/>turn teammate_angle"]
+    followerFarDash["followerFarDash<br/>dash 90"]
+    followerCheckAngle{"followerCheckAngle<br/>angle > 40 or angle < 25?"}
+    followerAdjustAngle["followerAdjustAngle<br/>turn teammate_angle - 30"]
+    followerCheckDist{"followerCheckDist<br/>dist < 7?"}
+    followerSlowDash["followerSlowDash<br/>dash 50"]
+    followerMediumDash["followerMediumDash<br/>dash 70"]
+
+    sendCommand(["sendCommand<br/>return command"])
+
+    root --> checkTeammates
+
+    checkTeammates -- "yes" --> leaderGoalVisible
+    checkTeammates -- "no" --> followerInit
+
+    leaderGoalVisible -- "yes" --> leaderRootNext
+    leaderGoalVisible -- "no" --> leaderRotate
+    leaderRotate --> sendCommand
+
+    leaderRootNext -- "yes" --> flagSeek
+    leaderRootNext -- "no" --> ballSeek
+
+    flagSeek -- "yes" --> closeFlag
+    flagSeek -- "no" --> farGoal
+    closeFlag --> leaderRootNext
+
+    farGoal -- "yes" --> rotateToGoal
+    farGoal -- "no" --> runToGoal
+    rotateToGoal --> sendCommand
+    runToGoal --> sendCommand
+
+    ballSeek -- "yes" --> closeBall
+    ballSeek -- "no" --> farGoal
+    closeBall -- "yes" --> ballGoalVisible
+    closeBall -- "no" --> ballGoalInvisible
+    ballGoalVisible --> sendCommand
+    ballGoalInvisible --> sendCommand
+
+    followerInit --> followerTooClose
+    followerTooClose -- "yes" --> followerAvoidCollision
+    followerTooClose -- "no" --> followerCheckFar
+    followerAvoidCollision --> sendCommand
+
+    followerCheckFar -- "yes" --> followerFarApproach
+    followerCheckFar -- "no" --> followerCheckAngle
+
+    followerFarApproach -- "yes" --> followerFarTurn
+    followerFarApproach -- "no" --> followerFarDash
+    followerFarTurn --> sendCommand
+    followerFarDash --> sendCommand
+
+    followerCheckAngle -- "yes" --> followerAdjustAngle
+    followerCheckAngle -- "no" --> followerCheckDist
+    followerAdjustAngle --> sendCommand
+
+    followerCheckDist -- "yes" --> followerSlowDash
+    followerCheckDist -- "no" --> followerMediumDash
+    followerSlowDash --> sendCommand
+    followerMediumDash --> sendCommand

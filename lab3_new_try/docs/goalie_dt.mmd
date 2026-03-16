@@ -1,0 +1,96 @@
+flowchart TD
+    root["root<br/>exec: command = null"]
+    checkBallVisible{"checkBallVisible<br/>visible(ball)?"}
+    updateBallInfo["updateBallInfo<br/>ball_dist, ball_angle, ball_dist_change"]
+    checkBallClose{"checkBallClose<br/>ball_dist < 20?"}
+    ballCloseLogic{"ballCloseLogic<br/>ball_dist < 1.5?"}
+    checkDistChange{"checkDistChange<br/>ball_dist_change < 2?"}
+    tryCatch["tryCatch<br/>catch ball_angle"]
+    checkBallKickable{"checkBallKickable<br/>ball_dist < 0.7?"}
+    kickBall{"kickBall<br/>visible(gl)?"}
+    kickToGl["kickToGl<br/>kick 100 angle(gl)"]
+    kickToFltOrFlb{"kickToFltOrFlb<br/>visible(flt)?"}
+    kickToFlt["kickToFlt<br/>kick 80 angle(flt)"]
+    kickToFlbOrWeak{"kickToFlbOrWeak<br/>visible(flb)?"}
+    kickToFlb["kickToFlb<br/>kick 80 angle(flb)"]
+    kickWeak["kickWeak<br/>kick 30 90"]
+    approachBall{"approachBall<br/>abs(ball_angle) > 5?"}
+    turnToBall["turnToBall<br/>turn ball_angle"]
+    dashToBall["dashToBall<br/>dash 100"]
+
+    goToGoal{"goToGoal<br/>visible(gr)?"}
+    searchGoal["searchGoal<br/>turn 60"]
+    checkGoalDist{"checkGoalDist<br/>distance(gr) > 5?"}
+    moveToGoal{"moveToGoal<br/>abs(angle(gr)) > 5?"}
+    turnToGoal["turnToGoal<br/>turn angle(gr)"]
+    dashToGoal["dashToGoal<br/>dash 80"]
+    positionInGoal{"positionInGoal<br/>need_adjustment()?"}
+    adjustPosition["adjustPosition<br/>adjust by fprc / gr"]
+    faceBall{"faceBall<br/>visible(ball)?"}
+    faceBallCheck{"faceBallCheck<br/>abs(angle(ball)) > 5?"}
+    turnFaceBall["turnFaceBall<br/>turn angle(ball)"]
+    faceBallSearch["faceBallSearch<br/>turn 30"]
+    standStill["standStill<br/>turn 1"]
+
+    sendCommand(["sendCommand<br/>return command"])
+
+    root --> checkBallVisible
+
+    checkBallVisible -- "yes" --> updateBallInfo
+    checkBallVisible -- "no" --> goToGoal
+    updateBallInfo --> checkBallClose
+
+    checkBallClose -- "yes" --> ballCloseLogic
+    checkBallClose -- "no" --> goToGoal
+
+    ballCloseLogic -- "yes" --> checkDistChange
+    ballCloseLogic -- "no" --> checkBallKickable
+
+    checkDistChange -- "yes" --> checkBallKickable
+    checkDistChange -- "no" --> tryCatch
+    tryCatch --> sendCommand
+
+    checkBallKickable -- "yes" --> kickBall
+    checkBallKickable -- "no" --> approachBall
+
+    kickBall -- "yes" --> kickToGl
+    kickBall -- "no" --> kickToFltOrFlb
+    kickToGl --> sendCommand
+
+    kickToFltOrFlb -- "yes" --> kickToFlt
+    kickToFltOrFlb -- "no" --> kickToFlbOrWeak
+    kickToFlt --> sendCommand
+
+    kickToFlbOrWeak -- "yes" --> kickToFlb
+    kickToFlbOrWeak -- "no" --> kickWeak
+    kickToFlb --> sendCommand
+    kickWeak --> sendCommand
+
+    approachBall -- "yes" --> turnToBall
+    approachBall -- "no" --> dashToBall
+    turnToBall --> sendCommand
+    dashToBall --> sendCommand
+
+    goToGoal -- "yes" --> checkGoalDist
+    goToGoal -- "no" --> searchGoal
+    searchGoal --> sendCommand
+
+    checkGoalDist -- "yes" --> moveToGoal
+    checkGoalDist -- "no" --> positionInGoal
+
+    moveToGoal -- "yes" --> turnToGoal
+    moveToGoal -- "no" --> dashToGoal
+    turnToGoal --> sendCommand
+    dashToGoal --> sendCommand
+
+    positionInGoal -- "yes" --> adjustPosition
+    positionInGoal -- "no" --> faceBall
+    adjustPosition --> sendCommand
+
+    faceBall -- "yes" --> faceBallCheck
+    faceBall -- "no" --> faceBallSearch
+    faceBallCheck -- "yes" --> turnFaceBall
+    faceBallCheck -- "no" --> standStill
+    turnFaceBall --> sendCommand
+    faceBallSearch --> sendCommand
+    standStill --> sendCommand
